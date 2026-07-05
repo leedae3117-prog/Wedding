@@ -437,7 +437,19 @@
       }
 
       main {
-        grid-template-rows: 360px auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #map {
+        order: 2;
+        min-height: 360px;
+        border-top: 1px solid var(--line);
+        border-bottom: 0;
+      }
+
+      .detail {
+        order: 1;
       }
 
       .detail-grid {
