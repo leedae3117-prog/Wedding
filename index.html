@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>웨딩홀 후보 기록</title>
+  <title>멍톨웨딩</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <style>
     :root {
@@ -48,8 +48,57 @@
     button.danger { background: #fff3f1; border-color: #f3b8b1; color: var(--danger); }
     button.icon { width: 40px; padding: 0; display: inline-grid; place-items: center; }
 
-    .app-shell {
+    .app-frame {
       min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .app-topbar {
+      background: #ffffff;
+      border-bottom: 1px solid var(--line);
+      padding: 16px 22px 0;
+    }
+
+    .app-topbar h1 {
+      font-size: 24px;
+    }
+
+    .app-tabs {
+      display: flex;
+      gap: 6px;
+      margin-top: 14px;
+      overflow-x: auto;
+    }
+
+    .tab-button {
+      border: 0;
+      border-bottom: 3px solid transparent;
+      border-radius: 0;
+      background: transparent;
+      min-height: 42px;
+      padding: 10px 14px;
+      color: var(--muted);
+      font-weight: 740;
+      white-space: nowrap;
+    }
+
+    .tab-button.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-panel {
+      display: none;
+      min-height: 0;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    .app-shell {
+      min-height: calc(100vh - 112px);
       display: grid;
       grid-template-columns: minmax(390px, 470px) minmax(0, 1fr);
     }
@@ -57,7 +106,7 @@
     aside {
       background: var(--panel);
       border-right: 1px solid var(--line);
-      min-height: 100vh;
+      min-height: calc(100vh - 112px);
       display: grid;
       grid-template-rows: auto auto 1fr;
     }
@@ -218,7 +267,7 @@
     }
 
     main {
-      min-height: 100vh;
+      min-height: calc(100vh - 112px);
       display: grid;
       grid-template-rows: 47vh 1fr;
     }
@@ -424,9 +473,31 @@
       line-height: 1.6;
     }
 
+    .placeholder-view {
+      min-height: calc(100vh - 112px);
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .placeholder-panel {
+      width: min(720px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    .placeholder-panel h2 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+
     @media (max-width: 940px) {
       .app-shell {
         grid-template-columns: 1fr;
+        min-height: auto;
       }
 
       aside {
@@ -482,10 +553,26 @@
       .detail {
         padding: 12px;
       }
+
+      .app-topbar {
+        padding: 14px 14px 0;
+      }
     }
   </style>
 </head>
 <body>
+  <div class="app-frame">
+    <header class="app-topbar">
+      <h1>멍톨웨딩</h1>
+      <p class="subtitle">웨딩 준비를 한 곳에서 정리합니다.</p>
+      <nav class="app-tabs" aria-label="멍톨웨딩 탭">
+        <button class="tab-button active" data-tab-target="venuesTab" type="button">웨딩홀 후보기록</button>
+        <button class="tab-button" data-tab-target="costTab" type="button">비용</button>
+        <button class="tab-button" data-tab-target="calendarTab" type="button">웨딩캘린더</button>
+      </nav>
+    </header>
+
+    <section id="venuesTab" class="tab-panel active">
   <div class="app-shell">
     <aside>
       <header>
@@ -512,6 +599,24 @@
       <section id="detail" class="detail"></section>
       <div id="map"></div>
     </main>
+  </div>
+    </section>
+
+    <section id="costTab" class="tab-panel">
+      <div class="placeholder-view">
+        <div class="placeholder-panel">
+          <h2>비용</h2>
+        </div>
+      </div>
+    </section>
+
+    <section id="calendarTab" class="tab-panel">
+      <div class="placeholder-view">
+        <div class="placeholder-panel">
+          <h2>웨딩캘린더</h2>
+        </div>
+      </div>
+    </section>
   </div>
 
   <div id="shareModal" class="share-box" role="dialog" aria-modal="true">
@@ -1676,6 +1781,21 @@
       await navigator.clipboard.writeText(els.shareText.value);
       els.copyShare.textContent = "복사됨";
       setTimeout(() => els.copyShare.textContent = "복사", 1100);
+    });
+
+    document.querySelectorAll("[data-tab-target]").forEach(button => {
+      button.addEventListener("click", () => {
+        const targetId = button.dataset.tabTarget;
+        document.querySelectorAll("[data-tab-target]").forEach(tab => {
+          tab.classList.toggle("active", tab === button);
+        });
+        document.querySelectorAll(".tab-panel").forEach(panel => {
+          panel.classList.toggle("active", panel.id === targetId);
+        });
+        if (targetId === "venuesTab" && map) {
+          window.setTimeout(() => map.invalidateSize(), 80);
+        }
+      });
     });
 
     initMap();
