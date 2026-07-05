@@ -1427,6 +1427,26 @@
 
       const form = document.getElementById("venueForm");
       const geoStatus = document.getElementById("geoStatus");
+      const syncBasicInfo = () => {
+        const data = new FormData(form);
+        Object.assign(venue, {
+          name: data.get("name").trim() || venue.name,
+          status: data.get("status"),
+          area: data.get("area").trim(),
+          address: data.get("address").trim(),
+          phone: data.get("phone").trim(),
+          url: data.get("url").trim(),
+          visitDate: data.get("visitDate"),
+          memo: data.get("memo").trim()
+        });
+        persist();
+      };
+
+      form.querySelectorAll("input, textarea, select").forEach(input => {
+        input.addEventListener("input", syncBasicInfo);
+        input.addEventListener("change", syncBasicInfo);
+        input.addEventListener("keyup", syncBasicInfo);
+      });
       form.addEventListener("submit", async event => {
         event.preventDefault();
         const data = new FormData(form);
@@ -1451,6 +1471,7 @@
 
       document.querySelectorAll("[data-cost]").forEach(input => {
         input.addEventListener("change", () => {
+          syncBasicInfo();
           venue[input.dataset.cost] = Number(input.value || 0);
           persist();
           render();
@@ -1459,6 +1480,7 @@
 
       document.querySelectorAll("[data-check]").forEach(input => {
         input.addEventListener("change", () => {
+          syncBasicInfo();
           venue.checks = venue.checks || {};
           venue.checks[input.dataset.check] = input.checked;
           persist();
