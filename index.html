@@ -631,8 +631,8 @@
     const CHECKLIST_STORAGE_KEY = "wedding-venue-checklist-v2";
     const GEOCODE_CACHE_KEY = "wedding-venue-geocode-cache-v1";
     const SUPABASE_SETTINGS_KEY = "wedding-venue-supabase-settings-v1";
-    const SUPABASE_URL = "";
-    const SUPABASE_ANON_KEY = "";
+    const SUPABASE_URL = "https://ljzrfhvbtghvuvbfekxz.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_fUUe6G2VF-FpnKzNgQNXgg_N_s27oNP";
     const SUPABASE_TABLE = "wedding_planner_state";
     const SUPABASE_STATE_ID = "daeyeon-wedding";
     const money = new Intl.NumberFormat("ko-KR");
@@ -885,25 +885,39 @@
       els.cloudStatus.className = `cloud-status ${type}`.trim();
     }
 
+    function normalizeSupabaseUrl(value) {
+      const raw = String(value || "").trim();
+      if (!raw) return "";
+      try {
+        const parsed = new URL(raw);
+        return parsed.hostname.endsWith(".supabase.co") ? parsed.origin : "";
+      } catch (error) {
+        return "";
+      }
+    }
+
     function readCloudSettings() {
       try {
         const saved = JSON.parse(localStorage.getItem(SUPABASE_SETTINGS_KEY) || "{}");
+        const savedUrl = normalizeSupabaseUrl(saved.url);
+        const defaultUrl = normalizeSupabaseUrl(SUPABASE_URL);
         return {
-          url: String(saved.url || SUPABASE_URL || "").trim(),
+          url: savedUrl || defaultUrl,
           key: String(saved.key || SUPABASE_ANON_KEY || "").trim()
         };
       } catch (error) {
         console.warn(error);
         return {
-          url: SUPABASE_URL,
+          url: normalizeSupabaseUrl(SUPABASE_URL),
           key: SUPABASE_ANON_KEY
         };
       }
     }
 
     function writeCloudSettings(settings) {
+      const url = normalizeSupabaseUrl(settings.url);
       localStorage.setItem(SUPABASE_SETTINGS_KEY, JSON.stringify({
-        url: settings.url.trim(),
+        url,
         key: settings.key.trim()
       }));
       supabaseClient = null;
@@ -917,7 +931,7 @@
 
     function cloudConfigured() {
       const settings = readCloudSettings();
-      return settings.url.startsWith("https://") && settings.key.length > 20;
+      return settings.url.startsWith("https://") && settings.url.includes(".supabase.co") && settings.key.length > 20;
     }
 
     function getSupabaseClient() {
