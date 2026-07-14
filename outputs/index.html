@@ -494,6 +494,201 @@
       font-size: 22px;
     }
 
+    .planner-page {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+
+    .mini-copy {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .sheet-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .budget-sheet {
+      width: 100%;
+      min-width: 1060px;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    .budget-sheet th,
+    .budget-sheet td {
+      border-bottom: 1px solid #edf0f3;
+      border-right: 1px solid #edf0f3;
+      padding: 0;
+      background: #fff;
+    }
+
+    .budget-sheet th {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      background: #f8fafc;
+      color: #3b424a;
+      height: 34px;
+      padding: 0 8px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    .budget-sheet input,
+    .budget-sheet select {
+      border: 0;
+      border-radius: 0;
+      min-height: 34px;
+      padding: 6px 8px;
+      font-size: 12px;
+      background: transparent;
+    }
+
+    .budget-sheet .num {
+      text-align: right;
+    }
+
+    .budget-sheet button {
+      min-height: 32px;
+      padding: 5px 8px;
+      border: 0;
+      color: var(--danger);
+      background: transparent;
+    }
+
+    .calendar-panel {
+      display: grid;
+      gap: 10px;
+    }
+
+    .calendar-head {
+      display: grid;
+      grid-template-columns: 40px 1fr 40px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .calendar-head h2 {
+      margin: 0;
+      text-align: center;
+      font-size: 24px;
+    }
+
+    .calendar-weekdays,
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+
+    .calendar-weekdays span {
+      padding: 8px 4px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .calendar-weekdays span:first-child,
+    .calendar-day.sunday .day-num {
+      color: #e15252;
+    }
+
+    .calendar-day {
+      min-height: 112px;
+      border: 1px solid #edf0f3;
+      margin: -1px 0 0 -1px;
+      padding: 7px;
+      background: #fff;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .calendar-day.muted {
+      color: #aab0b7;
+      background: #fbfcfd;
+    }
+
+    .calendar-day.selected {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+
+    .day-num {
+      display: block;
+      font-size: 18px;
+      font-weight: 780;
+      margin-bottom: 5px;
+    }
+
+    .cal-chip {
+      display: block;
+      width: 100%;
+      border-radius: 6px;
+      padding: 2px 5px;
+      margin-top: 3px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 11px;
+      line-height: 1.35;
+      background: #fce7f3;
+      color: #4a2235;
+    }
+
+    .cal-chip.cost {
+      background: #eef2ff;
+      color: #26326f;
+    }
+
+    .cal-more {
+      background: #eef0f3;
+      color: #5f6670;
+      font-weight: 760;
+    }
+
+    .day-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .day-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fbfcfd;
+      font-size: 13px;
+    }
+
+    .day-item strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .day-item p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
     @media (max-width: 940px) {
       .app-shell {
         grid-template-columns: 1fr;
@@ -557,6 +752,24 @@
       .app-topbar {
         padding: 14px 14px 0;
       }
+
+      .planner-page {
+        padding: 12px;
+      }
+
+      .calendar-day {
+        min-height: 94px;
+        padding: 5px;
+      }
+
+      .day-num {
+        font-size: 16px;
+      }
+
+      .cal-chip {
+        font-size: 10px;
+        padding: 2px 4px;
+      }
     }
   </style>
 </head>
@@ -603,18 +816,70 @@
     </section>
 
     <section id="costTab" class="tab-panel">
-      <div class="placeholder-view">
-        <div class="placeholder-panel">
-          <h2>비용</h2>
-        </div>
+      <div class="planner-page">
+        <section class="panel">
+          <div class="section-head">
+            <div>
+              <h2>비용</h2>
+              <p class="mini-copy">엑셀처럼 바로 입력하고, 스케줄이 있으면 캘린더에도 표시됩니다.</p>
+            </div>
+            <button id="addBudgetBtn" class="primary" type="button">항목 추가</button>
+          </div>
+          <div id="budgetSummary" class="cost-summary"></div>
+          <div class="sheet-wrap">
+            <table class="budget-sheet">
+              <thead>
+                <tr>
+                  <th>구분</th>
+                  <th>스케줄</th>
+                  <th>항목</th>
+                  <th>예산</th>
+                  <th>예약금</th>
+                  <th>잔금</th>
+                  <th>총금액</th>
+                  <th>신랑</th>
+                  <th>신부</th>
+                  <th>진행상황</th>
+                  <th>자세히</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="budgetBody"></tbody>
+            </table>
+          </div>
+        </section>
       </div>
     </section>
 
     <section id="calendarTab" class="tab-panel">
-      <div class="placeholder-view">
-        <div class="placeholder-panel">
-          <h2>웨딩캘린더</h2>
-        </div>
+      <div class="planner-page">
+        <section class="panel calendar-panel">
+          <div class="calendar-head">
+            <button id="prevMonthBtn" type="button">‹</button>
+            <h2 id="calendarTitle"></h2>
+            <button id="nextMonthBtn" type="button">›</button>
+          </div>
+          <div class="calendar-weekdays">
+            <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+          </div>
+          <div id="calendarGrid" class="calendar-grid"></div>
+        </section>
+
+        <section class="panel day-editor">
+          <div class="section-head">
+            <div>
+              <h2 id="selectedDateTitle">일정</h2>
+              <p class="mini-copy">날짜를 누른 뒤 할 일, 진행일자, 메모를 저장하세요.</p>
+            </div>
+            <button id="addCalendarBtn" class="primary" type="button">저장</button>
+          </div>
+          <div class="form-grid">
+            <label>할 일<input id="calendarTaskInput" placeholder="예: 드레스투어"></label>
+            <label>진행일자<input id="calendarDateInput" type="date"></label>
+            <label class="span-2">메모<textarea id="calendarMemoInput" placeholder="준비물, 예약시간, 연락처"></textarea></label>
+          </div>
+          <div id="dayScheduleList" class="day-list"></div>
+        </section>
       </div>
     </section>
   </div>
@@ -749,6 +1014,8 @@
     const LEGACY_STORAGE_KEYS = ["wedding-venue-planner-v2", "wedding-venue-planner-v1", "wedding-venue-planner"];
     const CHECKLIST_STORAGE_KEY = "wedding-venue-checklist-v2";
     const GEOCODE_CACHE_KEY = "wedding-venue-geocode-cache-v1";
+    const BUDGET_STORAGE_KEY = "mongtol-wedding-budget-v1";
+    const CALENDAR_STORAGE_KEY = "mongtol-wedding-calendar-v1";
     const SUPABASE_SETTINGS_KEY = "wedding-venue-supabase-settings-v1";
     const SUPABASE_URL = "https://ljzrfhvbtghvuvbfekxz.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_fUUe6G2VF-FpnKzNgQNXgg_N_s27oNP";
@@ -757,7 +1024,11 @@
     const money = new Intl.NumberFormat("ko-KR");
     let CHECK_ITEMS = loadChecklist();
     let venues = loadVenues();
+    let budgetItems = loadBudgetItems();
+    let calendarItems = loadCalendarItems();
     let selectedId = venues[0]?.id || null;
+    let calendarMonth = new Date();
+    let selectedCalendarDate = toISODate(new Date());
     let cardPointerDrag = null;
     let suppressCardClick = false;
     let supabaseClient = null;
@@ -796,6 +1067,92 @@
 
     function uid() {
       return "venue-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    }
+
+    function itemId(prefix) {
+      return `${prefix}-` + Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+    }
+
+    function toISODate(value) {
+      if (!value) return "";
+      if (value instanceof Date && !Number.isNaN(value.getTime())) {
+        return value.toISOString().slice(0, 10);
+      }
+      const text = String(value).trim();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+      const match = text.match(/^(\d{2,4})[.\-/\s]+(\d{1,2})[.\-/\s]+(\d{1,2})/);
+      if (!match) return "";
+      const year = match[1].length === 2 ? `20${match[1]}` : match[1];
+      return `${year}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`;
+    }
+
+    function numberValue(value) {
+      return Number(String(value || "").replace(/[^\d.-]/g, "")) || 0;
+    }
+
+    function shortText(value, size = 4) {
+      const text = String(value || "").trim();
+      return text.length > size ? `${text.slice(0, size)}...` : text;
+    }
+
+    function saveBudgetItems() {
+      localStorage.setItem(BUDGET_STORAGE_KEY, JSON.stringify(budgetItems));
+    }
+
+    function saveCalendarItems() {
+      localStorage.setItem(CALENDAR_STORAGE_KEY, JSON.stringify(calendarItems));
+    }
+
+    function loadBudgetItems() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(BUDGET_STORAGE_KEY) || "[]");
+        return Array.isArray(saved) ? saved.map(normalizeBudgetItem) : [];
+      } catch (error) {
+        console.warn(error);
+        return [];
+      }
+    }
+
+    function loadCalendarItems() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(CALENDAR_STORAGE_KEY) || "[]");
+        return Array.isArray(saved) ? saved.map(normalizeCalendarItem) : [];
+      } catch (error) {
+        console.warn(error);
+        return [];
+      }
+    }
+
+    function normalizeBudgetItem(item = {}) {
+      return {
+        id: item.id || itemId("budget"),
+        category: item.category || "",
+        schedule: toISODate(item.schedule) || "",
+        item: item.item || "",
+        estimate: item.estimate || "",
+        deposit: item.deposit || "",
+        balance: item.balance || "",
+        total: item.total || "",
+        groom: item.groom || "",
+        bride: item.bride || "",
+        status: item.status || "",
+        detail: item.detail || ""
+      };
+    }
+
+    function normalizeCalendarItem(item = {}) {
+      return {
+        id: item.id || itemId("schedule"),
+        task: item.task || "",
+        date: toISODate(item.date) || toISODate(new Date()),
+        memo: item.memo || ""
+      };
+    }
+
+    function persistPlanning() {
+      saveBudgetItems();
+      saveCalendarItems();
+      scheduleCloudSave();
     }
 
     function loadChecklist() {
@@ -1066,6 +1423,8 @@
       return {
         checklist: CHECK_ITEMS,
         venues,
+        budgetItems,
+        calendarItems,
         savedAt: new Date().toISOString()
       };
     }
@@ -1082,8 +1441,16 @@
         id: venue.id || uid(),
         checks: { ...CHECK_ITEMS.reduce((acc, item) => ({ ...acc, [item]: false }), {}), ...(venue.checks || {}) }
       })).map(normalizeVenueChecks);
+      budgetItems = Array.isArray(payload.budgetItems)
+        ? payload.budgetItems.map(normalizeBudgetItem)
+        : loadBudgetItems();
+      calendarItems = Array.isArray(payload.calendarItems)
+        ? payload.calendarItems.map(normalizeCalendarItem)
+        : loadCalendarItems();
       selectedId = venues[0]?.id || null;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(venues));
+      saveBudgetItems();
+      saveCalendarItems();
       return true;
     }
 
@@ -1686,15 +2053,146 @@
       }
     }
 
+    function budgetAmount(row) {
+      return numberValue(row.total) || numberValue(row.deposit) + numberValue(row.balance) || numberValue(row.estimate);
+    }
+
+    function renderBudgetSummary() {
+      const el = document.getElementById("budgetSummary");
+      if (!el) return;
+      const estimate = budgetItems.reduce((sum, row) => sum + numberValue(row.estimate), 0);
+      const paid = budgetItems.reduce((sum, row) => sum + numberValue(row.deposit) + numberValue(row.balance), 0);
+      const total = budgetItems.reduce((sum, row) => sum + budgetAmount(row), 0);
+      el.innerHTML = `
+        <div class="metric"><span>예상 예산</span><strong>${money.format(estimate)}원</strong></div>
+        <div class="metric"><span>확정/총액</span><strong>${money.format(total)}원</strong></div>
+        <div class="metric"><span>지불 입력</span><strong>${money.format(paid)}원</strong></div>
+        <div class="metric"><span>항목 수</span><strong>${money.format(budgetItems.length)}개</strong></div>
+      `;
+    }
+
+    function renderBudget() {
+      renderBudgetSummary();
+      const body = document.getElementById("budgetBody");
+      if (!body) return;
+      if (!budgetItems.length) {
+        body.innerHTML = '<tr><td colspan="12" class="sheet-empty">항목 추가를 눌러 비용을 입력하세요.</td></tr>';
+        return;
+      }
+      body.innerHTML = budgetItems.map(row => `
+        <tr data-budget-id="${escapeHtml(row.id)}">
+          <td><input data-budget-field="category" value="${escapeHtml(row.category)}"></td>
+          <td><input data-budget-field="schedule" type="date" value="${escapeHtml(row.schedule)}"></td>
+          <td><input data-budget-field="item" value="${escapeHtml(row.item)}"></td>
+          <td><input class="num" data-budget-field="estimate" inputmode="numeric" value="${escapeHtml(row.estimate)}"></td>
+          <td><input class="num" data-budget-field="deposit" inputmode="numeric" value="${escapeHtml(row.deposit)}"></td>
+          <td><input class="num" data-budget-field="balance" inputmode="numeric" value="${escapeHtml(row.balance)}"></td>
+          <td><input class="num" data-budget-field="total" inputmode="numeric" value="${escapeHtml(row.total)}"></td>
+          <td><input class="num" data-budget-field="groom" inputmode="numeric" value="${escapeHtml(row.groom)}"></td>
+          <td><input class="num" data-budget-field="bride" inputmode="numeric" value="${escapeHtml(row.bride)}"></td>
+          <td><input data-budget-field="status" value="${escapeHtml(row.status)}"></td>
+          <td><input data-budget-field="detail" value="${escapeHtml(row.detail)}"></td>
+          <td><button type="button" data-delete-budget="${escapeHtml(row.id)}">삭제</button></td>
+        </tr>
+      `).join("");
+    }
+
+    function entriesForDate(dateText) {
+      const manual = calendarItems
+        .filter(item => item.date === dateText)
+        .map(item => ({ type: "task", id: item.id, label: shortText(item.task), memo: item.memo }));
+      const costs = budgetItems
+        .filter(item => item.schedule === dateText && item.item)
+        .map(item => ({
+          type: "cost",
+          id: item.id,
+          label: `${shortText(item.item)} ${money.format(budgetAmount(item))}`,
+          memo: item.detail
+        }));
+      return [...manual, ...costs];
+    }
+
+    function renderCalendar() {
+      const title = document.getElementById("calendarTitle");
+      const grid = document.getElementById("calendarGrid");
+      const dateInput = document.getElementById("calendarDateInput");
+      if (!title || !grid) return;
+
+      const year = calendarMonth.getFullYear();
+      const month = calendarMonth.getMonth();
+      title.textContent = `${year}.${String(month + 1).padStart(2, "0")}`;
+      if (dateInput && !dateInput.value) dateInput.value = selectedCalendarDate;
+
+      const start = new Date(year, month, 1);
+      start.setDate(start.getDate() - start.getDay());
+      const days = Array.from({ length: 42 }, (_, index) => {
+        const date = new Date(start);
+        date.setDate(start.getDate() + index);
+        return date;
+      });
+
+      grid.innerHTML = days.map(date => {
+        const dateText = toISODate(date);
+        const entries = entriesForDate(dateText);
+        const visible = entries.slice(0, 3);
+        const more = entries.length - visible.length;
+        const classes = [
+          "calendar-day",
+          date.getMonth() === month ? "" : "muted",
+          date.getDay() === 0 ? "sunday" : "",
+          dateText === selectedCalendarDate ? "selected" : ""
+        ].filter(Boolean).join(" ");
+        return `
+          <button class="${classes}" type="button" data-calendar-date="${dateText}">
+            <span class="day-num">${date.getDate()}</span>
+            ${visible.map(entry => `<span class="cal-chip ${entry.type === "cost" ? "cost" : ""}">${escapeHtml(entry.label)}</span>`).join("")}
+            ${more > 0 ? `<span class="cal-chip cal-more">+${more}</span>` : ""}
+          </button>
+        `;
+      }).join("");
+
+      renderSelectedDay();
+    }
+
+    function renderSelectedDay() {
+      const title = document.getElementById("selectedDateTitle");
+      const dateInput = document.getElementById("calendarDateInput");
+      const list = document.getElementById("dayScheduleList");
+      if (!title || !dateInput || !list) return;
+      title.textContent = `${selectedCalendarDate} 일정`;
+      dateInput.value = selectedCalendarDate;
+      const manual = calendarItems.filter(item => item.date === selectedCalendarDate);
+      const costs = budgetItems.filter(item => item.schedule === selectedCalendarDate && item.item);
+      const rows = [
+        ...manual.map(item => ({ ...item, kind: "일정", title: item.task, deletable: true })),
+        ...costs.map(item => ({ ...item, kind: "비용", title: `${item.item} · ${money.format(budgetAmount(item))}원`, memo: item.detail, deletable: false }))
+      ];
+      if (!rows.length) {
+        list.innerHTML = '<div class="empty">선택한 날짜에 등록된 내용이 없습니다.</div>';
+        return;
+      }
+      list.innerHTML = rows.map(item => `
+        <div class="day-item">
+          <div>
+            <strong>[${item.kind}] ${escapeHtml(item.title || "")}</strong>
+            <p>${escapeHtml(item.memo || "")}</p>
+          </div>
+          ${item.deletable ? `<button type="button" data-delete-calendar="${escapeHtml(item.id)}">삭제</button>` : ""}
+        </div>
+      `).join("");
+    }
+
     function render() {
       renderList();
       renderDetail();
       renderMap();
+      renderBudget();
+      renderCalendar();
       geocodeMissingVenueAddresses();
     }
 
     function exportData() {
-      const blob = new Blob([JSON.stringify({ checklist: CHECK_ITEMS, venues }, null, 2)], { type: "application/json" });
+      const blob = new Blob([JSON.stringify(plannerPayload(), null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -1704,7 +2202,7 @@
     }
 
     function openShare() {
-      els.shareText.value = JSON.stringify({ checklist: CHECK_ITEMS, venues }, null, 2);
+      els.shareText.value = JSON.stringify(plannerPayload(), null, 2);
       els.modal.classList.add("open");
       els.shareText.focus();
       els.shareText.select();
@@ -1731,7 +2229,11 @@
           id: v.id || uid(),
           checks: { ...CHECK_ITEMS.reduce((acc, item) => ({ ...acc, [item]: false }), {}), ...(v.checks || {}) }
         })).map(normalizeVenueChecks);
+        budgetItems = Array.isArray(payload.budgetItems) ? payload.budgetItems.map(normalizeBudgetItem) : budgetItems;
+        calendarItems = Array.isArray(payload.calendarItems) ? payload.calendarItems.map(normalizeCalendarItem) : calendarItems;
         selectedId = venues[0]?.id || null;
+        saveBudgetItems();
+        saveCalendarItems();
         persist();
         els.modal.classList.remove("open");
         render();
@@ -1781,6 +2283,76 @@
       await navigator.clipboard.writeText(els.shareText.value);
       els.copyShare.textContent = "복사됨";
       setTimeout(() => els.copyShare.textContent = "복사", 1100);
+    });
+
+    document.getElementById("addBudgetBtn")?.addEventListener("click", () => {
+      budgetItems.push(normalizeBudgetItem({ category: "", schedule: "", item: "" }));
+      persistPlanning();
+      renderBudget();
+      renderCalendar();
+    });
+
+    document.getElementById("budgetBody")?.addEventListener("input", event => {
+      const input = event.target.closest("[data-budget-field]");
+      if (!input) return;
+      const row = input.closest("[data-budget-id]");
+      const item = budgetItems.find(entry => entry.id === row?.dataset.budgetId);
+      if (!item) return;
+      item[input.dataset.budgetField] = input.value;
+      persistPlanning();
+      renderBudgetSummary();
+      renderCalendar();
+    });
+
+    document.getElementById("budgetBody")?.addEventListener("click", event => {
+      const button = event.target.closest("[data-delete-budget]");
+      if (!button) return;
+      budgetItems = budgetItems.filter(item => item.id !== button.dataset.deleteBudget);
+      persistPlanning();
+      renderBudget();
+      renderCalendar();
+    });
+
+    document.getElementById("prevMonthBtn")?.addEventListener("click", () => {
+      calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1);
+      renderCalendar();
+    });
+
+    document.getElementById("nextMonthBtn")?.addEventListener("click", () => {
+      calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1);
+      renderCalendar();
+    });
+
+    document.getElementById("calendarGrid")?.addEventListener("click", event => {
+      const day = event.target.closest("[data-calendar-date]");
+      if (!day) return;
+      selectedCalendarDate = day.dataset.calendarDate;
+      document.getElementById("calendarTaskInput").value = "";
+      document.getElementById("calendarMemoInput").value = "";
+      renderCalendar();
+    });
+
+    document.getElementById("addCalendarBtn")?.addEventListener("click", () => {
+      const taskInput = document.getElementById("calendarTaskInput");
+      const dateInput = document.getElementById("calendarDateInput");
+      const memoInput = document.getElementById("calendarMemoInput");
+      const task = taskInput.value.trim();
+      const date = toISODate(dateInput.value) || selectedCalendarDate;
+      if (!task) return;
+      selectedCalendarDate = date;
+      calendarItems.push(normalizeCalendarItem({ task, date, memo: memoInput.value.trim() }));
+      taskInput.value = "";
+      memoInput.value = "";
+      persistPlanning();
+      renderCalendar();
+    });
+
+    document.getElementById("dayScheduleList")?.addEventListener("click", event => {
+      const button = event.target.closest("[data-delete-calendar]");
+      if (!button) return;
+      calendarItems = calendarItems.filter(item => item.id !== button.dataset.deleteCalendar);
+      persistPlanning();
+      renderCalendar();
     });
 
     document.querySelectorAll("[data-tab-target]").forEach(button => {
