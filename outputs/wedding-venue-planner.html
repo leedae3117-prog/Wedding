@@ -58,10 +58,25 @@
       background: #ffffff;
       border-bottom: 1px solid var(--line);
       padding: 16px 22px 0;
+      position: relative;
     }
 
     .app-topbar h1 {
       font-size: 24px;
+    }
+
+    .dday-badge {
+      position: absolute;
+      top: 16px;
+      right: 22px;
+      border: 1px solid #cfe5e1;
+      border-radius: 999px;
+      background: #f0fdfa;
+      color: #0f766e;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
     }
 
     .app-tabs {
@@ -820,6 +835,13 @@
         padding: 14px 14px 0;
       }
 
+      .dday-badge {
+        top: 14px;
+        right: 14px;
+        padding: 6px 9px;
+        font-size: 11px;
+      }
+
       .planner-page {
         padding: 12px;
       }
@@ -845,6 +867,7 @@
     <header class="app-topbar">
       <h1>멍톨웨딩</h1>
       <p class="subtitle">웨딩 준비를 한 곳에서 정리합니다.</p>
+      <div id="ddayBadge" class="dday-badge" aria-label="결혼식 디데이"></div>
       <nav class="app-tabs" aria-label="멍톨웨딩 탭">
         <button class="tab-button active" data-tab-target="venuesTab" type="button">웨딩홀 후보기록</button>
         <button class="tab-button" data-tab-target="costTab" type="button">비용</button>
@@ -1144,7 +1167,10 @@
     function toISODate(value) {
       if (!value) return "";
       if (value instanceof Date && !Number.isNaN(value.getTime())) {
-        return value.toISOString().slice(0, 10);
+        const year = value.getFullYear();
+        const month = String(value.getMonth() + 1).padStart(2, "0");
+        const day = String(value.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
       }
       const text = String(value).trim();
       if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
@@ -1161,6 +1187,23 @@
     function shortText(value, size = 4, ellipsis = true) {
       const text = String(value || "").trim();
       return text.length > size ? `${text.slice(0, size)}${ellipsis ? "..." : ""}` : text;
+    }
+
+    function renderDday() {
+      const badge = document.getElementById("ddayBadge");
+      if (!badge) return;
+      const wedding = calendarItems
+        .filter(item => item.task && item.task.includes("결혼식") && item.date)
+        .sort((a, b) => a.date.localeCompare(b.date))[0];
+      if (!wedding) {
+        badge.textContent = "결혼식 D-day 미정";
+        return;
+      }
+      const today = new Date();
+      const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const target = new Date(`${wedding.date}T00:00:00`);
+      const diff = Math.round((target - start) / 86400000);
+      badge.textContent = diff > 0 ? `결혼식 D-${diff}` : diff === 0 ? "결혼식 D-day" : `결혼식 D+${Math.abs(diff)}`;
     }
 
     function defaultBudgetItems() {
@@ -2364,6 +2407,7 @@
       }).join("");
 
       renderSelectedDay();
+      renderDday();
     }
 
     function renderSelectedDay() {
