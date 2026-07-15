@@ -608,10 +608,13 @@
     }
 
     .calendar-day {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
       min-height: 112px;
       border: 1px solid #edf0f3;
       margin: -1px 0 0 -1px;
-      padding: 7px;
+      padding: 4px 6px 6px;
       background: #fff;
       cursor: pointer;
       overflow: hidden;
@@ -631,7 +634,8 @@
       display: block;
       font-size: 18px;
       font-weight: 780;
-      margin-bottom: 5px;
+      line-height: 1;
+      margin: 0 0 6px;
     }
 
     .cal-chip {
@@ -1029,6 +1033,7 @@
     let selectedId = venues[0]?.id || null;
     let calendarMonth = new Date();
     let selectedCalendarDate = toISODate(new Date());
+    let editingCalendarId = null;
     let cardPointerDrag = null;
     let suppressCardClick = false;
     let supabaseClient = null;
@@ -1095,6 +1100,66 @@
       return text.length > size ? `${text.slice(0, size)}...` : text;
     }
 
+    function defaultBudgetItems() {
+      return [
+        ["인사", "상견례", "400000", "미정", ""],
+        ["스튜디오 (스냅촬영)", "스튜디오 및 스냅", "1000000", "예약완료", ""],
+        ["스튜디오 (스냅촬영)", "드레스", "", "예약완료", "스튜디오 포함 가격"],
+        ["스튜디오 (스냅촬영)", "메이크업&헤어", "", "예약완료", "스튜디오 포함 가격"],
+        ["스튜디오 (스냅촬영)", "헬퍼비", "150000", "예약완료", ""],
+        ["스튜디오 (스냅촬영)", "추가비용 (원본)", "150000", "", ""],
+        ["결혼준비", "청첩장", "150000", "샘플보기", ""],
+        ["결혼준비", "본식스냅", "850000", "예약 전", ""],
+        ["결혼식", "홀 대여비", "2000000", "9월 투어", ""],
+        ["결혼식", "본식 드레스 & 턱시도", "600000", "", ""],
+        ["결혼식", "본식 헤어 & 메이크업", "300000", "", ""],
+        ["결혼식", "혼주 메이크업 4인", "400000", "", ""],
+        ["결혼식", "웨딩이벤트 (꽃장식 등)", "100000", "", "대여비에 포함인지 체크"],
+        ["결혼식", "부케/부토니에", "", "", "대여비에 포함인지 체크"],
+        ["결혼식", "축가비", "100000", "", ""],
+        ["결혼식", "주례비", "200000", "", "주례 없는 결혼은 삭제"],
+        ["결혼식", "사회비", "100000", "", ""],
+        ["결혼식", "헬퍼비", "150000", "", ""],
+        ["결혼식", "폐백 음식", "300000", "", ""],
+        ["결혼식", "원판", "", "", "원판 포함인지 체크"],
+        ["결혼식", "식대비", "12000000", "", "1인 식대 4만원 x 300명 예산"],
+        ["예복", "부부 한복 대여", "300000", "", ""],
+        ["예복", "혼주 한복 대여", "200000", "", "오색비단 균일가 8만원 / 비단본가"],
+        ["예복", "아버지 및 형제 예복", "1000000", "", ""],
+        ["신혼여행", "항공권", "2000000", "", ""],
+        ["신혼여행", "숙박비", "1000000", "", ""],
+        ["신혼여행", "여행비", "1500000", "", ""],
+        ["신혼여행", "선물 구입비", "500000", "", ""],
+        ["신혼집", "신혼집", "", "", ""],
+        ["신혼집", "인테리어", "", "", ""],
+        ["신혼집", "부동산비", "", "", ""],
+        ["신혼집", "입주청소", "300000", "", ""],
+        ["혼수", "가구", "7000000", "", ""],
+        ["혼수", "가전", "13000000", "", ""],
+        ["혼수", "생활용품", "2000000", "", ""],
+        ["기타", "이바지 음식", "1000000", "", ""]
+      ].map(([category, item, estimate, status, detail]) => normalizeBudgetItem({
+        category,
+        item,
+        estimate,
+        status,
+        detail,
+        schedule: ""
+      }));
+    }
+
+    function hasMeaningfulBudgetItems(items) {
+      return Array.isArray(items) && items.some(item => (
+        item.category ||
+        item.item ||
+        item.estimate ||
+        item.actual ||
+        item.schedule ||
+        item.status ||
+        item.detail
+      ));
+    }
+
     function saveBudgetItems() {
       localStorage.setItem(BUDGET_STORAGE_KEY, JSON.stringify(budgetItems));
     }
@@ -1105,11 +1170,15 @@
 
     function loadBudgetItems() {
       try {
-        const saved = JSON.parse(localStorage.getItem(BUDGET_STORAGE_KEY) || "[]");
-        return Array.isArray(saved) ? saved.map(normalizeBudgetItem) : [];
+        const raw = localStorage.getItem(BUDGET_STORAGE_KEY);
+        if (raw === null) return defaultBudgetItems();
+        const saved = JSON.parse(raw || "[]");
+        if (!Array.isArray(saved)) return defaultBudgetItems();
+        const normalized = saved.map(normalizeBudgetItem);
+        return hasMeaningfulBudgetItems(normalized) ? normalized : defaultBudgetItems();
       } catch (error) {
         console.warn(error);
-        return [];
+        return defaultBudgetItems();
       }
     }
 
@@ -1424,6 +1493,7 @@
         checklist: CHECK_ITEMS,
         venues,
         budgetItems,
+        budgetSeeded: true,
         calendarItems,
         savedAt: new Date().toISOString()
       };
@@ -1442,7 +1512,12 @@
         checks: { ...CHECK_ITEMS.reduce((acc, item) => ({ ...acc, [item]: false }), {}), ...(venue.checks || {}) }
       })).map(normalizeVenueChecks);
       budgetItems = Array.isArray(payload.budgetItems)
-        ? payload.budgetItems.map(normalizeBudgetItem)
+        ? (() => {
+          const normalized = payload.budgetItems.map(normalizeBudgetItem);
+          return hasMeaningfulBudgetItems(normalized)
+            ? normalized
+            : (payload.budgetSeeded ? [] : defaultBudgetItems());
+        })()
         : loadBudgetItems();
       calendarItems = Array.isArray(payload.calendarItems)
         ? payload.calendarItems.map(normalizeCalendarItem)
@@ -2172,7 +2247,7 @@
         return;
       }
       list.innerHTML = rows.map(item => `
-        <div class="day-item">
+        <div class="day-item" ${item.deletable ? `data-edit-calendar="${escapeHtml(item.id)}"` : ""}>
           <div>
             <strong>[${item.kind}] ${escapeHtml(item.title || "")}</strong>
             <p>${escapeHtml(item.memo || "")}</p>
@@ -2229,7 +2304,12 @@
           id: v.id || uid(),
           checks: { ...CHECK_ITEMS.reduce((acc, item) => ({ ...acc, [item]: false }), {}), ...(v.checks || {}) }
         })).map(normalizeVenueChecks);
-        budgetItems = Array.isArray(payload.budgetItems) ? payload.budgetItems.map(normalizeBudgetItem) : budgetItems;
+        if (Array.isArray(payload.budgetItems)) {
+          const normalizedBudget = payload.budgetItems.map(normalizeBudgetItem);
+          budgetItems = hasMeaningfulBudgetItems(normalizedBudget)
+            ? normalizedBudget
+            : (payload.budgetSeeded ? [] : defaultBudgetItems());
+        }
         calendarItems = Array.isArray(payload.calendarItems) ? payload.calendarItems.map(normalizeCalendarItem) : calendarItems;
         selectedId = venues[0]?.id || null;
         saveBudgetItems();
@@ -2327,8 +2407,10 @@
       const day = event.target.closest("[data-calendar-date]");
       if (!day) return;
       selectedCalendarDate = day.dataset.calendarDate;
+      editingCalendarId = null;
       document.getElementById("calendarTaskInput").value = "";
       document.getElementById("calendarMemoInput").value = "";
+      document.getElementById("addCalendarBtn").textContent = "저장";
       renderCalendar();
     });
 
@@ -2340,18 +2422,39 @@
       const date = toISODate(dateInput.value) || selectedCalendarDate;
       if (!task) return;
       selectedCalendarDate = date;
-      calendarItems.push(normalizeCalendarItem({ task, date, memo: memoInput.value.trim() }));
+      const editing = calendarItems.find(item => item.id === editingCalendarId);
+      if (editing) {
+        Object.assign(editing, normalizeCalendarItem({ ...editing, task, date, memo: memoInput.value.trim() }));
+      } else {
+        calendarItems.push(normalizeCalendarItem({ task, date, memo: memoInput.value.trim() }));
+      }
+      editingCalendarId = null;
       taskInput.value = "";
       memoInput.value = "";
+      document.getElementById("addCalendarBtn").textContent = "저장";
       persistPlanning();
       renderCalendar();
     });
 
     document.getElementById("dayScheduleList")?.addEventListener("click", event => {
       const button = event.target.closest("[data-delete-calendar]");
-      if (!button) return;
-      calendarItems = calendarItems.filter(item => item.id !== button.dataset.deleteCalendar);
-      persistPlanning();
+      if (button) {
+        calendarItems = calendarItems.filter(item => item.id !== button.dataset.deleteCalendar);
+        if (editingCalendarId === button.dataset.deleteCalendar) editingCalendarId = null;
+        persistPlanning();
+        renderCalendar();
+        return;
+      }
+      const editable = event.target.closest("[data-edit-calendar]");
+      if (!editable) return;
+      const item = calendarItems.find(entry => entry.id === editable.dataset.editCalendar);
+      if (!item) return;
+      editingCalendarId = item.id;
+      selectedCalendarDate = item.date;
+      document.getElementById("calendarTaskInput").value = item.task;
+      document.getElementById("calendarDateInput").value = item.date;
+      document.getElementById("calendarMemoInput").value = item.memo;
+      document.getElementById("addCalendarBtn").textContent = "수정 저장";
       renderCalendar();
     });
 
