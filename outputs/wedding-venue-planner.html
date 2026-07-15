@@ -665,6 +665,11 @@
       color: #e15252;
     }
 
+    .calendar-weekdays span:last-child,
+    .calendar-day.saturday .day-num {
+      color: #3467d6;
+    }
+
     .calendar-day {
       display: flex;
       flex-direction: column;
@@ -2346,6 +2351,7 @@
           "calendar-day",
           date.getMonth() === month ? "" : "muted",
           date.getDay() === 0 ? "sunday" : "",
+          date.getDay() === 6 ? "saturday" : "",
           dateText === selectedCalendarDate ? "selected" : ""
         ].filter(Boolean).join(" ");
         return `
