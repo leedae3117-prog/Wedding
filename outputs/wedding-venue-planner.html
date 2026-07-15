@@ -527,6 +527,7 @@
       min-width: 1060px;
       border-collapse: collapse;
       font-size: 12px;
+      table-layout: fixed;
     }
 
     .budget-sheet th,
@@ -541,13 +542,26 @@
       position: sticky;
       top: 0;
       z-index: 1;
-      background: #f8fafc;
-      color: #3b424a;
+      background: #d9d9d9;
+      color: #111827;
       height: 34px;
       padding: 0 8px;
-      text-align: left;
+      text-align: center;
       white-space: nowrap;
     }
+
+    .budget-sheet th:nth-child(1) { width: 92px; }
+    .budget-sheet th:nth-child(2) { width: 112px; }
+    .budget-sheet th:nth-child(3) { width: 170px; }
+    .budget-sheet th:nth-child(4),
+    .budget-sheet th:nth-child(5),
+    .budget-sheet th:nth-child(6),
+    .budget-sheet th:nth-child(7),
+    .budget-sheet th:nth-child(8),
+    .budget-sheet th:nth-child(9) { width: 96px; }
+    .budget-sheet th:nth-child(10) { width: 120px; }
+    .budget-sheet th:nth-child(11) { width: 180px; }
+    .budget-sheet th:nth-child(12) { width: 52px; }
 
     .budget-sheet input,
     .budget-sheet select {
@@ -559,8 +573,52 @@
       background: transparent;
     }
 
+    .budget-sheet .budget-category {
+      background: #fdeadb;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    .budget-category input {
+      min-height: 100%;
+      text-align: center;
+      font-weight: 800;
+      white-space: pre-line;
+    }
+
     .budget-sheet .num {
       text-align: right;
+    }
+
+    .budget-sheet .calc-cell {
+      background: #ffffcc;
+      color: #111827;
+      text-align: right;
+      font-weight: 700;
+      padding: 0 8px;
+    }
+
+    .budget-sheet .sum-row td {
+      background: #d9d9d9;
+      color: #111827;
+      font-weight: 800;
+      height: 34px;
+      padding: 0 8px;
+      text-align: right;
+    }
+
+    .budget-sheet .sum-row .sum-label {
+      text-align: center;
+    }
+
+    .budget-sheet .grand-row td {
+      background: #fac090;
+      color: #111827;
+      font-weight: 900;
+    }
+
+    .budget-sheet .grand-row .grand-label {
+      text-align: center;
     }
 
     .budget-sheet button {
@@ -2129,20 +2187,60 @@
     }
 
     function budgetAmount(row) {
-      return numberValue(row.total) || numberValue(row.deposit) + numberValue(row.balance) || numberValue(row.estimate);
+      const paid = numberValue(row.deposit) + numberValue(row.balance);
+      return paid || numberValue(row.total) || numberValue(row.estimate);
+    }
+
+    function budgetCalculatedTotal(row) {
+      const paid = numberValue(row.deposit) + numberValue(row.balance);
+      return paid || numberValue(row.total);
+    }
+
+    function budgetBaseItems() {
+      return budgetItems.filter(row => row.item !== "총 비용");
+    }
+
+    function budgetSums(rows) {
+      return rows.reduce((acc, row) => {
+        acc.estimate += numberValue(row.estimate);
+        acc.deposit += numberValue(row.deposit);
+        acc.balance += numberValue(row.balance);
+        acc.total += budgetCalculatedTotal(row);
+        acc.groom += numberValue(row.groom);
+        acc.bride += numberValue(row.bride);
+        return acc;
+      }, { estimate: 0, deposit: 0, balance: 0, total: 0, groom: 0, bride: 0 });
+    }
+
+    function renderBudgetMoney(value) {
+      return money.format(numberValue(value));
+    }
+
+    function budgetGroups() {
+      const groups = [];
+      budgetBaseItems().forEach(row => {
+        const category = row.category || "미분류";
+        const last = groups[groups.length - 1];
+        if (!last || last.category !== category) {
+          groups.push({ category, rows: [] });
+        }
+        groups[groups.length - 1].rows.push(row);
+      });
+      return groups;
     }
 
     function renderBudgetSummary() {
       const el = document.getElementById("budgetSummary");
       if (!el) return;
-      const estimate = budgetItems.reduce((sum, row) => sum + numberValue(row.estimate), 0);
-      const paid = budgetItems.reduce((sum, row) => sum + numberValue(row.deposit) + numberValue(row.balance), 0);
-      const total = budgetItems.reduce((sum, row) => sum + budgetAmount(row), 0);
+      const rows = budgetBaseItems();
+      const estimate = rows.reduce((sum, row) => sum + numberValue(row.estimate), 0);
+      const paid = rows.reduce((sum, row) => sum + numberValue(row.deposit) + numberValue(row.balance), 0);
+      const total = rows.reduce((sum, row) => sum + budgetAmount(row), 0);
       el.innerHTML = `
         <div class="metric"><span>예상 예산</span><strong>${money.format(estimate)}원</strong></div>
         <div class="metric"><span>확정/총액</span><strong>${money.format(total)}원</strong></div>
         <div class="metric"><span>지불 입력</span><strong>${money.format(paid)}원</strong></div>
-        <div class="metric"><span>항목 수</span><strong>${money.format(budgetItems.length)}개</strong></div>
+        <div class="metric"><span>항목 수</span><strong>${money.format(rows.length)}개</strong></div>
       `;
     }
 
@@ -2150,26 +2248,59 @@
       renderBudgetSummary();
       const body = document.getElementById("budgetBody");
       if (!body) return;
-      if (!budgetItems.length) {
+      const groups = budgetGroups();
+      if (!groups.length) {
         body.innerHTML = '<tr><td colspan="12" class="sheet-empty">항목 추가를 눌러 비용을 입력하세요.</td></tr>';
         return;
       }
-      body.innerHTML = budgetItems.map(row => `
-        <tr data-budget-id="${escapeHtml(row.id)}">
-          <td><input data-budget-field="category" value="${escapeHtml(row.category)}"></td>
-          <td><input data-budget-field="schedule" type="date" value="${escapeHtml(row.schedule)}"></td>
-          <td><input data-budget-field="item" value="${escapeHtml(row.item)}"></td>
-          <td><input class="num" data-budget-field="estimate" inputmode="numeric" value="${escapeHtml(row.estimate)}"></td>
-          <td><input class="num" data-budget-field="deposit" inputmode="numeric" value="${escapeHtml(row.deposit)}"></td>
-          <td><input class="num" data-budget-field="balance" inputmode="numeric" value="${escapeHtml(row.balance)}"></td>
-          <td><input class="num" data-budget-field="total" inputmode="numeric" value="${escapeHtml(row.total)}"></td>
-          <td><input class="num" data-budget-field="groom" inputmode="numeric" value="${escapeHtml(row.groom)}"></td>
-          <td><input class="num" data-budget-field="bride" inputmode="numeric" value="${escapeHtml(row.bride)}"></td>
-          <td><input data-budget-field="status" value="${escapeHtml(row.status)}"></td>
-          <td><input data-budget-field="detail" value="${escapeHtml(row.detail)}"></td>
-          <td><button type="button" data-delete-budget="${escapeHtml(row.id)}">삭제</button></td>
-        </tr>
-      `).join("");
+      const html = groups.map(group => {
+        const sums = budgetSums(group.rows);
+        const ids = group.rows.map(row => row.id).join(",");
+        const rows = group.rows.map((row, index) => `
+          <tr data-budget-id="${escapeHtml(row.id)}">
+            ${index === 0 ? `<td class="budget-category" rowspan="${group.rows.length + 1}"><input data-budget-category-ids="${escapeHtml(ids)}" value="${escapeHtml(group.category)}"></td>` : ""}
+            <td><input data-budget-field="schedule" type="date" value="${escapeHtml(row.schedule)}"></td>
+            <td><input data-budget-field="item" value="${escapeHtml(row.item)}"></td>
+            <td><input class="num" data-budget-field="estimate" inputmode="numeric" value="${escapeHtml(row.estimate)}"></td>
+            <td><input class="num" data-budget-field="deposit" inputmode="numeric" value="${escapeHtml(row.deposit)}"></td>
+            <td><input class="num" data-budget-field="balance" inputmode="numeric" value="${escapeHtml(row.balance)}"></td>
+            <td class="calc-cell">${renderBudgetMoney(budgetCalculatedTotal(row))}</td>
+            <td><input class="num" data-budget-field="groom" inputmode="numeric" value="${escapeHtml(row.groom)}"></td>
+            <td><input class="num" data-budget-field="bride" inputmode="numeric" value="${escapeHtml(row.bride)}"></td>
+            <td><input data-budget-field="status" value="${escapeHtml(row.status)}"></td>
+            <td><input data-budget-field="detail" value="${escapeHtml(row.detail)}"></td>
+            <td><button type="button" data-delete-budget="${escapeHtml(row.id)}">삭제</button></td>
+          </tr>
+        `).join("");
+        return `${rows}
+          <tr class="sum-row">
+            <td></td>
+            <td class="sum-label">총 비용</td>
+            <td>${renderBudgetMoney(sums.estimate)}</td>
+            <td>${renderBudgetMoney(sums.deposit)}</td>
+            <td>${renderBudgetMoney(sums.balance)}</td>
+            <td>${renderBudgetMoney(sums.total)}</td>
+            <td>${renderBudgetMoney(sums.groom)}</td>
+            <td>${renderBudgetMoney(sums.bride)}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+          </tr>`;
+      }).join("");
+      const grand = budgetSums(budgetBaseItems());
+      body.innerHTML = `${html}
+        <tr class="sum-row grand-row">
+          <td class="grand-label" colspan="3">총 비용</td>
+          <td>${renderBudgetMoney(grand.estimate)}</td>
+          <td>${renderBudgetMoney(grand.deposit)}</td>
+          <td>${renderBudgetMoney(grand.balance)}</td>
+          <td>${renderBudgetMoney(grand.total)}</td>
+          <td>${renderBudgetMoney(grand.groom)}</td>
+          <td>${renderBudgetMoney(grand.bride)}</td>
+          <td></td>
+          <td></td>
+          <td></td>
+        </tr>`;
     }
 
     function entriesForDate(dateText) {
@@ -2177,7 +2308,7 @@
         .filter(item => item.date === dateText)
         .map(item => ({ type: "task", id: item.id, label: shortText(item.task), memo: item.memo }));
       const costs = budgetItems
-        .filter(item => item.schedule === dateText && item.item)
+        .filter(item => item.schedule === dateText && item.item && item.item !== "총 비용")
         .map(item => ({
           type: "cost",
           id: item.id,
@@ -2237,7 +2368,7 @@
       title.textContent = `${selectedCalendarDate} 일정`;
       dateInput.value = selectedCalendarDate;
       const manual = calendarItems.filter(item => item.date === selectedCalendarDate);
-      const costs = budgetItems.filter(item => item.schedule === selectedCalendarDate && item.item);
+      const costs = budgetItems.filter(item => item.schedule === selectedCalendarDate && item.item && item.item !== "총 비용");
       const rows = [
         ...manual.map(item => ({ ...item, kind: "일정", title: item.task, deletable: true })),
         ...costs.map(item => ({ ...item, kind: "비용", title: `${item.item} · ${money.format(budgetAmount(item))}원`, memo: item.detail, deletable: false }))
@@ -2373,6 +2504,16 @@
     });
 
     document.getElementById("budgetBody")?.addEventListener("input", event => {
+      const categoryInput = event.target.closest("[data-budget-category-ids]");
+      if (categoryInput) {
+        const ids = categoryInput.dataset.budgetCategoryIds.split(",");
+        budgetItems.forEach(item => {
+          if (ids.includes(item.id)) item.category = categoryInput.value;
+        });
+        persistPlanning();
+        renderCalendar();
+        return;
+      }
       const input = event.target.closest("[data-budget-field]");
       if (!input) return;
       const row = input.closest("[data-budget-id]");
@@ -2382,6 +2523,13 @@
       persistPlanning();
       renderBudgetSummary();
       renderCalendar();
+    });
+
+    document.getElementById("budgetBody")?.addEventListener("change", event => {
+      if (event.target.closest("[data-budget-category-ids], [data-budget-field]")) {
+        renderBudget();
+        renderCalendar();
+      }
     });
 
     document.getElementById("budgetBody")?.addEventListener("click", event => {
