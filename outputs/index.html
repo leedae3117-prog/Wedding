@@ -703,7 +703,7 @@
       padding: 2px 5px;
       margin-top: 3px;
       overflow: hidden;
-      text-overflow: ellipsis;
+      text-overflow: clip;
       white-space: nowrap;
       font-size: 11px;
       line-height: 1.35;
@@ -1153,9 +1153,9 @@
       return Number(String(value || "").replace(/[^\d.-]/g, "")) || 0;
     }
 
-    function shortText(value, size = 4) {
+    function shortText(value, size = 4, ellipsis = true) {
       const text = String(value || "").trim();
-      return text.length > size ? `${text.slice(0, size)}...` : text;
+      return text.length > size ? `${text.slice(0, size)}${ellipsis ? "..." : ""}` : text;
     }
 
     function defaultBudgetItems() {
@@ -2306,13 +2306,13 @@
     function entriesForDate(dateText) {
       const manual = calendarItems
         .filter(item => item.date === dateText)
-        .map(item => ({ type: "task", id: item.id, label: shortText(item.task), memo: item.memo }));
+        .map(item => ({ type: "task", id: item.id, label: shortText(item.task, 3, false), memo: item.memo }));
       const costs = budgetItems
         .filter(item => item.schedule === dateText && item.item && item.item !== "총 비용")
         .map(item => ({
           type: "cost",
           id: item.id,
-          label: `${shortText(item.item)} ${money.format(budgetAmount(item))}`,
+          label: `${shortText(item.item, 3, false)} ${money.format(budgetAmount(item))}`,
           memo: item.detail
         }));
       return [...manual, ...costs];
