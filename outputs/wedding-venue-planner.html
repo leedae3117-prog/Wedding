@@ -914,6 +914,7 @@
               <p class="mini-copy">엑셀처럼 바로 입력하고, 스케줄이 있으면 캘린더에도 표시됩니다.</p>
             </div>
             <button id="addBudgetBtn" class="primary" type="button">항목 추가</button>
+            <button id="saveBudgetBtn" type="button">저장</button>
           </div>
           <div class="sheet-wrap">
             <table class="budget-sheet">
@@ -1690,7 +1691,10 @@
       const client = getSupabaseClient();
       if (!client) return;
 
-      if (cloudSaveBlocked) return;
+      if (cloudSaveBlocked) {
+        setCloudStatus("변경된 내용이 있습니다. 새로고침 후 다시 수정해주세요", "warn");
+        return;
+      }
       if (!skipFreshnessCheck && await serverHasNewerChanges(client)) {
         cloudSaveBlocked = true;
         setCloudStatus("변경된 내용이 있습니다. 새로고침 후 다시 수정해주세요", "warn");
@@ -2589,6 +2593,18 @@
       persistPlanning();
       renderBudget();
       renderCalendar();
+    });
+
+    document.getElementById("saveBudgetBtn")?.addEventListener("click", async () => {
+      clearTimeout(cloudSaveTimer);
+      saveBudgetItems();
+      saveCalendarItems();
+      if (cloudConfigured()) {
+        setCloudStatus("서버 저장 중...", "warn");
+        await saveCloudState();
+      } else {
+        setCloudStatus("로컬 저장", "ok");
+      }
     });
 
     document.getElementById("budgetBody")?.addEventListener("input", event => {
