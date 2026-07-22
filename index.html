@@ -1124,6 +1124,8 @@
     let suppressCardClick = false;
     let supabaseClient = null;
     let cloudSaveTimer = null;
+    let cloudKnownUpdatedAt = "";
+    let cloudSaveBlocked = false;
     let geocodeBatchRunning = false;
     let map;
     let markerLayer;
@@ -1605,6 +1607,12 @@
       };
     }
 
+    function comparablePayload(payload) {
+      const copy = { ...(payload || {}) };
+      delete copy.savedAt;
+      return JSON.stringify(copy);
+    }
+
     function applyPlannerPayload(payload) {
       if (!payload || !Array.isArray(payload.venues)) return false;
       CHECK_ITEMS = Array.isArray(payload.checklist) && payload.checklist.length
@@ -1655,16 +1663,39 @@
       }
 
       if (data?.payload && applyPlannerPayload(data.payload)) {
+        cloudKnownUpdatedAt = data.updated_at || "";
+        cloudSaveBlocked = false;
         render();
         setCloudStatus(`서버 저장됨 · ${new Date(data.updated_at).toLocaleString("ko-KR")}`, "ok");
       } else {
-        await saveCloudState();
+        await saveCloudState(true);
       }
     }
 
-    async function saveCloudState() {
+    async function serverHasNewerChanges(client) {
+      const { data, error } = await client
+        .from(SUPABASE_TABLE)
+        .select("payload, updated_at")
+        .eq("id", SUPABASE_STATE_ID)
+        .maybeSingle();
+
+      if (error || !data?.updated_at || !cloudKnownUpdatedAt) return false;
+      const remoteTime = new Date(data.updated_at).getTime();
+      const knownTime = new Date(cloudKnownUpdatedAt).getTime();
+      return remoteTime > knownTime
+        && comparablePayload(data.payload) !== comparablePayload(plannerPayload());
+    }
+
+    async function saveCloudState(skipFreshnessCheck = false) {
       const client = getSupabaseClient();
       if (!client) return;
+
+      if (cloudSaveBlocked) return;
+      if (!skipFreshnessCheck && await serverHasNewerChanges(client)) {
+        cloudSaveBlocked = true;
+        setCloudStatus("변경된 내용이 있습니다. 새로고침 후 다시 수정해주세요", "warn");
+        return;
+      }
 
       const now = new Date().toISOString();
       const { error } = await client
@@ -1675,6 +1706,8 @@
           updated_at: now
         });
 
+      if (!error) cloudKnownUpdatedAt = now;
+
       if (error) {
         setCloudStatus(`서버 저장 실패: ${error.message}`, "warn");
       } else {
@@ -1684,6 +1717,10 @@
 
     function scheduleCloudSave() {
       if (!cloudConfigured()) return;
+      if (cloudSaveBlocked) {
+        setCloudStatus("변경된 내용이 있습니다. 새로고침 후 다시 수정해주세요", "warn");
+        return;
+      }
       clearTimeout(cloudSaveTimer);
       setCloudStatus("서버 저장 대기 중...", "warn");
       cloudSaveTimer = setTimeout(saveCloudState, 800);
@@ -2639,6 +2676,7 @@
     document.getElementById("dayScheduleList")?.addEventListener("click", event => {
       const button = event.target.closest("[data-delete-calendar]");
       if (button) {
+        if (!confirm("삭제하시겠습니까?")) return;
         calendarItems = calendarItems.filter(item => item.id !== button.dataset.deleteCalendar);
         if (editingCalendarId === button.dataset.deleteCalendar) editingCalendarId = null;
         persistPlanning();
