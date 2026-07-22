@@ -523,6 +523,18 @@
       margin-bottom: 12px;
     }
 
+    .section-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .section-actions .cloud-status {
+      margin: 0;
+    }
+
     .mini-copy {
       margin: 4px 0 0;
       color: var(--muted);
@@ -913,8 +925,11 @@
               <h2>비용</h2>
               <p class="mini-copy">엑셀처럼 바로 입력하고, 스케줄이 있으면 캘린더에도 표시됩니다.</p>
             </div>
-            <button id="addBudgetBtn" class="primary" type="button">항목 추가</button>
-            <button id="saveBudgetBtn" type="button">저장</button>
+            <div class="section-actions">
+              <button id="addBudgetBtn" class="primary" type="button">항목 추가</button>
+              <button id="saveBudgetBtn" type="button">저장</button>
+              <span id="budgetSaveStatus" class="cloud-status"></span>
+            </div>
           </div>
           <div class="sheet-wrap">
             <table class="budget-sheet">
@@ -1141,6 +1156,7 @@
       cloud: document.getElementById("cloudBtn"),
       export: document.getElementById("exportBtn"),
       cloudStatus: document.getElementById("cloudStatus"),
+      budgetSaveStatus: document.getElementById("budgetSaveStatus"),
       modal: document.getElementById("shareModal"),
       shareText: document.getElementById("shareText"),
       copyShare: document.getElementById("copyShareBtn"),
@@ -1539,6 +1555,12 @@
       els.cloudStatus.className = `cloud-status ${type}`.trim();
     }
 
+    function setBudgetSaveStatus(message, type = "") {
+      if (!els.budgetSaveStatus) return;
+      els.budgetSaveStatus.textContent = message;
+      els.budgetSaveStatus.className = `cloud-status ${type}`.trim();
+    }
+
     function normalizeSupabaseUrl(value) {
       const raw = String(value || "").trim();
       if (!raw) return "";
@@ -1693,12 +1715,12 @@
 
       if (cloudSaveBlocked) {
         setCloudStatus("변경된 내용이 있습니다. 새로고침 후 다시 수정해주세요", "warn");
-        return;
+        return "blocked";
       }
       if (!skipFreshnessCheck && await serverHasNewerChanges(client)) {
         cloudSaveBlocked = true;
         setCloudStatus("변경된 내용이 있습니다. 새로고침 후 다시 수정해주세요", "warn");
-        return;
+        return "blocked";
       }
 
       const now = new Date().toISOString();
@@ -1714,8 +1736,10 @@
 
       if (error) {
         setCloudStatus(`서버 저장 실패: ${error.message}`, "warn");
+        return false;
       } else {
         setCloudStatus(`서버 저장됨 · ${new Date(now).toLocaleString("ko-KR")}`, "ok");
+        return true;
       }
     }
 
@@ -2601,9 +2625,16 @@
       saveCalendarItems();
       if (cloudConfigured()) {
         setCloudStatus("서버 저장 중...", "warn");
-        await saveCloudState();
+        setBudgetSaveStatus("서버 저장 중...", "warn");
+        const saved = await saveCloudState();
+        const nowText = new Date().toLocaleString("ko-KR");
+        setBudgetSaveStatus(saved === true
+          ? `서버 저장됨 · ${nowText}`
+          : (saved === "blocked" ? "변경된 내용이 있습니다. 새로고침 후 다시 수정해주세요" : "서버 저장 실패"),
+          saved === true ? "ok" : "warn");
       } else {
         setCloudStatus("로컬 저장", "ok");
+        setBudgetSaveStatus(`로컬 저장됨 · ${new Date().toLocaleString("ko-KR")}`, "ok");
       }
     });
 
