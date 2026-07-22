@@ -529,6 +529,8 @@
       justify-content: center;
       gap: 8px;
       flex-wrap: wrap;
+      width: 100%;
+      margin: 8px 0 12px;
     }
 
     .section-actions .cloud-status {
@@ -925,11 +927,11 @@
               <h2>비용</h2>
               <p class="mini-copy">엑셀처럼 바로 입력하고, 스케줄이 있으면 캘린더에도 표시됩니다.</p>
             </div>
-            <div class="section-actions">
-              <button id="addBudgetBtn" class="primary" type="button">항목 추가</button>
-              <button id="saveBudgetBtn" type="button">저장</button>
-              <span id="budgetSaveStatus" class="cloud-status"></span>
-            </div>
+          </div>
+          <div class="section-actions">
+            <button id="addBudgetBtn" class="primary" type="button">항목 추가</button>
+            <button id="saveBudgetBtn" type="button">저장</button>
+            <span id="budgetSaveStatus" class="cloud-status"></span>
           </div>
           <div class="sheet-wrap">
             <table class="budget-sheet">
@@ -969,6 +971,10 @@
             <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
           </div>
           <div id="calendarGrid" class="calendar-grid"></div>
+          <div class="section-actions">
+            <button id="saveCalendarCloudBtn" type="button">저장</button>
+            <span id="calendarSaveStatus" class="cloud-status"></span>
+          </div>
         </section>
 
         <section class="panel day-editor">
@@ -1157,6 +1163,7 @@
       export: document.getElementById("exportBtn"),
       cloudStatus: document.getElementById("cloudStatus"),
       budgetSaveStatus: document.getElementById("budgetSaveStatus"),
+      calendarSaveStatus: document.getElementById("calendarSaveStatus"),
       modal: document.getElementById("shareModal"),
       shareText: document.getElementById("shareText"),
       copyShare: document.getElementById("copyShareBtn"),
@@ -1555,10 +1562,10 @@
       els.cloudStatus.className = `cloud-status ${type}`.trim();
     }
 
-    function setBudgetSaveStatus(message, type = "") {
-      if (!els.budgetSaveStatus) return;
-      els.budgetSaveStatus.textContent = message;
-      els.budgetSaveStatus.className = `cloud-status ${type}`.trim();
+    function setInlineSaveStatus(el, message, type = "") {
+      if (!el) return;
+      el.textContent = message;
+      el.className = `cloud-status ${type}`.trim();
     }
 
     function normalizeSupabaseUrl(value) {
@@ -2619,23 +2626,31 @@
       renderCalendar();
     });
 
-    document.getElementById("saveBudgetBtn")?.addEventListener("click", async () => {
+    async function savePlanningNow(statusEl) {
       clearTimeout(cloudSaveTimer);
       saveBudgetItems();
       saveCalendarItems();
       if (cloudConfigured()) {
         setCloudStatus("서버 저장 중...", "warn");
-        setBudgetSaveStatus("서버 저장 중...", "warn");
+        setInlineSaveStatus(statusEl, "서버 저장 중...", "warn");
         const saved = await saveCloudState();
         const nowText = new Date().toLocaleString("ko-KR");
-        setBudgetSaveStatus(saved === true
+        setInlineSaveStatus(statusEl, saved === true
           ? `서버 저장됨 · ${nowText}`
           : (saved === "blocked" ? "변경된 내용이 있습니다. 새로고침 후 다시 수정해주세요" : "서버 저장 실패"),
           saved === true ? "ok" : "warn");
       } else {
         setCloudStatus("로컬 저장", "ok");
-        setBudgetSaveStatus(`로컬 저장됨 · ${new Date().toLocaleString("ko-KR")}`, "ok");
+        setInlineSaveStatus(statusEl, `로컬 저장됨 · ${new Date().toLocaleString("ko-KR")}`, "ok");
       }
+    }
+
+    document.getElementById("saveBudgetBtn")?.addEventListener("click", async () => {
+      await savePlanningNow(els.budgetSaveStatus);
+    });
+
+    document.getElementById("saveCalendarCloudBtn")?.addEventListener("click", async () => {
+      await savePlanningNow(els.calendarSaveStatus);
     });
 
     document.getElementById("budgetBody")?.addEventListener("input", event => {
