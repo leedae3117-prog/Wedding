@@ -1617,13 +1617,51 @@
       return settings.url.startsWith("https://") && settings.url.includes(".supabase.co") && settings.key.length > 20;
     }
 
-    function getSupabaseClient() {
-      if (!cloudConfigured() || !window.supabase) return null;
-      const settings = readCloudSettings();
-      if (!supabaseClient) {
-        supabaseClient = window.supabase.createClient(settings.url, settings.key);
+    function cloudHeaders(extra = {}) {
+      const { key } = readCloudSettings();
+      return {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        ...extra
+      };
+    }
+
+    async function readCloudRow() {
+      if (!cloudConfigured()) return { data: null, error: null };
+      const { url } = readCloudSettings();
+      const endpoint = `${url}/rest/v1/${SUPABASE_TABLE}?id=eq.${encodeURIComponent(SUPABASE_STATE_ID)}&select=payload,updated_at`;
+      try {
+        const response = await fetch(endpoint, { headers: cloudHeaders() });
+        if (!response.ok) throw new Error(await response.text() || response.statusText);
+        const rows = await response.json();
+        return { data: rows[0] || null, error: null };
+      } catch (error) {
+        return { data: null, error };
       }
-      return supabaseClient;
+    }
+
+    async function writeCloudRow(payload, updatedAt) {
+      if (!cloudConfigured()) return { error: new Error("Supabase 설정이 없습니다.") };
+      const { url } = readCloudSettings();
+      const endpoint = `${url}/rest/v1/${SUPABASE_TABLE}?on_conflict=id`;
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: cloudHeaders({
+            "Content-Type": "application/json",
+            Prefer: "resolution=merge-duplicates,return=minimal"
+          }),
+          body: JSON.stringify({
+            id: SUPABASE_STATE_ID,
+            payload,
+            updated_at: updatedAt
+          })
+        });
+        if (!response.ok) throw new Error(await response.text() || response.statusText);
+        return { error: null };
+      } catch (error) {
+        return { error };
+      }
     }
 
     function plannerPayload() {
@@ -1674,18 +1712,13 @@
     }
 
     async function loadCloudState() {
-      const client = getSupabaseClient();
-      if (!client) {
+      if (!cloudConfigured()) {
         setCloudStatus("로컬 저장");
         return;
       }
 
       setCloudStatus("서버 불러오는 중...", "warn");
-      const { data, error } = await client
-        .from(SUPABASE_TABLE)
-        .select("payload, updated_at")
-        .eq("id", SUPABASE_STATE_ID)
-        .maybeSingle();
+      const { data, error } = await readCloudRow();
 
       if (error) {
         setCloudStatus(`서버 불러오기 실패: ${error.message}`, "warn");
@@ -1702,12 +1735,8 @@
       }
     }
 
-    async function serverHasNewerChanges(client) {
-      const { data, error } = await client
-        .from(SUPABASE_TABLE)
-        .select("payload, updated_at")
-        .eq("id", SUPABASE_STATE_ID)
-        .maybeSingle();
+    async function serverHasNewerChanges() {
+      const { data, error } = await readCloudRow();
 
       if (error || !data?.updated_at || !cloudKnownUpdatedAt) return false;
       const remoteTime = new Date(data.updated_at).getTime();
@@ -1717,27 +1746,20 @@
     }
 
     async function saveCloudState(skipFreshnessCheck = false) {
-      const client = getSupabaseClient();
-      if (!client) return;
+      if (!cloudConfigured()) return false;
 
       if (cloudSaveBlocked) {
         setCloudStatus("변경된 내용이 있습니다. 새로고침 후 다시 수정해주세요", "warn");
         return "blocked";
       }
-      if (!skipFreshnessCheck && await serverHasNewerChanges(client)) {
+      if (!skipFreshnessCheck && await serverHasNewerChanges()) {
         cloudSaveBlocked = true;
         setCloudStatus("변경된 내용이 있습니다. 새로고침 후 다시 수정해주세요", "warn");
         return "blocked";
       }
 
       const now = new Date().toISOString();
-      const { error } = await client
-        .from(SUPABASE_TABLE)
-        .upsert({
-          id: SUPABASE_STATE_ID,
-          payload: plannerPayload(),
-          updated_at: now
-        });
+      const { error } = await writeCloudRow(plannerPayload(), now);
 
       if (!error) cloudKnownUpdatedAt = now;
 
