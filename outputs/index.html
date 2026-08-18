@@ -722,6 +722,18 @@
       outline-offset: -2px;
     }
 
+    .calendar-day.today .day-num {
+      align-self: center;
+      min-width: 32px;
+      padding: 5px 7px;
+      border-radius: 999px;
+      background: #e5f2f0;
+      color: #0f766e;
+      font-weight: 900;
+      box-shadow: inset 0 0 0 1px rgba(15, 118, 110, .18);
+      text-align: center;
+    }
+
     .day-num {
       display: block;
       font-size: 18px;
@@ -1204,6 +1216,19 @@
       if (!match) return "";
       const year = match[1].length === 2 ? `20${match[1]}` : match[1];
       return `${year}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`;
+    }
+
+    function todayInKorea() {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Seoul",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+      }).formatToParts(new Date()).reduce((acc, part) => {
+        acc[part.type] = part.value;
+        return acc;
+      }, {});
+      return `${parts.year}-${parts.month}-${parts.day}`;
     }
 
     function numberValue(value) {
@@ -2480,6 +2505,7 @@
         return date;
       });
 
+      const todayText = todayInKorea();
       grid.innerHTML = days.map(date => {
         const dateText = toISODate(date);
         const entries = entriesForDate(dateText);
@@ -2490,6 +2516,7 @@
           date.getMonth() === month ? "" : "muted",
           date.getDay() === 0 ? "sunday" : "",
           date.getDay() === 6 ? "saturday" : "",
+          dateText === todayText ? "today" : "",
           dateText === selectedCalendarDate ? "selected" : ""
         ].filter(Boolean).join(" ");
         return `
